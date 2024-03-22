@@ -1,1 +1,2 @@
 psycopg==3.1.18
+requests @ file:///private/tmp/python-requests-20231124-5682-96f89l/requests-2.31.0
