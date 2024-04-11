@@ -46,7 +46,7 @@ def get_json_data_from_paths(paths : list[str]) -> list:
 
 # get the competitions data
 comp_data = get_json_data_from_paths(['competitions.json'])
-print(f'Fetched competitions data from GitHub (length: {len(comp_data)})')
+print(f'Fetched competitions data from GitHub (length: {len(comp_data)}).')
 
 # get the necessary data from comp_data and store it in valid_comp_data
 valid_comp_data = []
@@ -54,7 +54,7 @@ for comp in comp_data:
     comp_name = comp['competition_name']
     if comp_name in VALID_SEASONS.keys() and comp['season_name'] in VALID_SEASONS[comp_name]:
         valid_comp_data.append(comp)
-print(f'Filtered valid competitions data (length: {len(valid_comp_data)})')
+print(f'Filtered valid competitions data (length: {len(valid_comp_data)}).')
 
 # determine the paths to get the necessary data from matches
 matches_paths = []
@@ -65,25 +65,48 @@ for comp in valid_comp_data:
 
 # get the matches data
 matches_data = get_json_data_from_paths(matches_paths)
-print(f'Fetched matches data from GitHub (length: {len(matches_data)})')
+print(f'Fetched matches data from GitHub (length: {len(matches_data)}).')
 
-# # determine the paths to get the necessary data from lineups and events
-# lineups_paths = []
-# events_paths = []
-# for match in matches_data:
-#     match_id = match['match_id']
-#     lineups_paths.append(f'lineups/{match_id}.json')
-#     events_paths.append(f'events/{match_id}.json')
+# determine the paths to get the necessary data from lineups and events
+lineups_paths = []
+events_paths = []
+for match in matches_data:
+    match_id = match['match_id']
+    lineups_paths.append(f'lineups/{match_id}.json')
+    events_paths.append(f'events/{match_id}.json')
 
-# # get the lineups data
-# lineups_data = get_json_data_from_paths(lineups_paths)
-# print(f'Fetched lineups data from GitHub (length: {len(lineups_data)})')
+# get the lineups data
+lineups_data = get_json_data_from_paths(lineups_paths)
+print(f'Fetched lineups data from GitHub (length: {len(lineups_data)}).')
 
 # # get the events data
 # events_data = get_json_data_from_paths(events_paths)
-# print(f'Fetched events data from GitHub (length: {len(events_data)})')
+# print(f'Fetched events data from GitHub (length: {len(events_data)}).')
+print()
 
 # TESTING ADDING AND CONNECTING TO THE POSTGRESQL DB -------------------------
+print('Starting to populate tables in PostgreSQL...')
+print()
+
+def insert_managers(match : dict, team : str):
+    if 'managers' in match[team]:
+        manager = match[team]['managers'][0]
+        manager_id = manager['id']
+        manager_values = (manager_id, manager['name'], manager['nickname'],
+                        manager['dob'], manager['country']['name'],
+                        manager_id)
+        cur.execute(INSERT_MANAGERS_QUERY, manager_values)
+
+def insert_teams(match : dict, team : str):
+    team_dict = match[team]
+    team_id = team_dict[team + '_id']
+    manager_id = None
+    if 'managers' in team_dict:
+        manager_id = team_dict['managers'][0]['id']
+    team_values = (team_id, team_dict[team + '_name'],
+                   team_dict[team + '_gender'], team_dict[team + '_group'],
+                   team_dict['country']['name'], manager_id, team_id)
+    cur.execute(INSERT_TEAMS_QUERY, team_values)
 
 # connect to PostgreSQL database
 conn = psycopg2.connect(
@@ -112,34 +135,64 @@ CREATE_TABLES_QUERY = '''
         season_name VARCHAR(9),
         FOREIGN KEY (season_id) REFERENCES seasons (season_id)
     );
-    
+    CREATE TABLE IF NOT EXISTS managers (
+        id INT PRIMARY KEY,
+        name VARCHAR(255),
+        nickname VARCHAR(255),
+        dob DATE,
+        country_name VARCHAR(255)     
+    );
+    CREATE TABLE IF NOT EXISTS teams (
+        team_id INT PRIMARY KEY,
+        team_name VARCHAR(255),
+        team_gender VARCHAR(255),
+        team_group VARCHAR(255),
+        country_name VARCHAR(255),
+        manager_id INT,
+        FOREIGN KEY (manager_id) REFERENCES managers (id)
+    );
+    CREATE TABLE IF NOT EXISTS stadiums (
+        id INT PRIMARY KEY,
+        name VARCHAR(255),
+        country_name VARCHAR(255)
+    );
+    CREATE TABLE IF NOT EXISTS referees (
+        id INT PRIMARY KEY,
+        name VARCHAR(255),
+        country_name VARCHAR(255)
+    );
+    CREATE TABLE IF NOT EXISTS matches (
+        match_id INT PRIMARY KEY,
+        match_date DATE,
+        kick_off TIME,
+        competition_id INT,
+        season_id INT,
+        home_team_id INT,
+        away_team_id INT,
+        home_score INT,
+        away_score INT,
+        match_week INT,
+        competition_stage_name VARCHAR(255),
+        stadium_id INT,
+        referee_id INT,
+        FOREIGN KEY (season_id) REFERENCES seasons (season_id),
+        FOREIGN KEY (home_team_id) REFERENCES teams (team_id),
+        FOREIGN KEY (away_team_id) REFERENCES teams (team_id),
+        FOREIGN KEY (stadium_id) REFERENCES stadiums (id),
+        FOREIGN KEY (referee_id) REFERENCES referees (id)
+    );
 '''
 
-# CREATE TABLE IF NOT EXISTS managers (
-#         id INT PRIMARY KEY,
-#         name VARCHAR(255),
-        
+# CREATE TABLE IF NOT EXISTS players (
+#         player_id INT PRIMARY KEY,
+#         player_name VARCHAR(255),
+#         player_nickname VARCHAR(255),
+#         jersey_number INT,
+#         country_name VARCHAR(255)
 #     );
 
-# CREATE TABLE IF NOT EXISTS teams (
-#         team_id INT PRIMARY KEY,
-#         team_name VARCHAR(255),
-#         team_gender VARCHAR(255),
-#         team_group VARCHAR(255),
-#         country_name VARCHAR(255),
-#         manager_id INT,
-#         FOREIGN KEY (manager_id) REFERENCES managers (manager_id)
-#     );
-
-# CREATE TABLE IF NOT EXISTS matches (
-#         match_id INT PRIMARY KEY,
-#         match_date DATE,
-#         kick_off TIME,
-#         competition_id INT,
-#         season_id INT,
-#         FOREIGN KEY (competition_id) REFERENCES competitions (competition_id),
-#         FOREIGN KEY (season_id) REFERENCES seasons (season_id)
-#     );
+# FIXME: i can't add this as a FK because competition_id is not unique in the competitions table
+# FOREIGN KEY (competition_id) REFERENCES competitions (competition_id),
 
 INSERT_SEASONS_QUERY = '''
     INSERT INTO seasons (season_id, season_name)
@@ -154,7 +207,7 @@ INSERT_SEASONS_QUERY = '''
 '''
 
 INSERT_COMPS_QUERY = '''
-    INSERT INTO COMPETITIONS (competition_id, season_id, country_name,
+    INSERT INTO competitions (competition_id, season_id, country_name,
     competition_name, competition_gender, competition_youth,
     competition_international, season_name)
     SELECT
@@ -169,7 +222,90 @@ INSERT_COMPS_QUERY = '''
     WHERE NOT EXISTS (
         SELECT 1
         FROM competitions
-        WHERE competition_id = %s
+        WHERE season_name = %s
+    );
+'''
+
+INSERT_MANAGERS_QUERY = '''
+    INSERT INTO managers (id, name, nickname, dob, country_name)
+    SELECT
+        %s AS id,
+        %s AS name,
+        %s AS nickname,
+        %s AS dob,
+        %s AS country_name
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM managers
+        WHERE id = %s
+    )
+'''
+
+INSERT_TEAMS_QUERY = '''
+    INSERT INTO teams (team_id, team_name, team_gender, team_group,
+    country_name, manager_id)
+    SELECT
+        %s AS team_id,
+        %s AS team_name,
+        %s AS team_gender,
+        %s AS team_group,
+        %s AS country_name,
+        %s AS manager_id
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM teams
+        WHERE team_id = %s
+    )
+'''
+
+INSERT_STADIUMS_QUERY = '''
+    INSERT INTO stadiums (id, name, country_name)
+    SELECT
+        %s AS id,
+        %s AS name,
+        %s AS country_name
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM stadiums
+        WHERE id = %s
+    )
+'''
+
+INSERT_REFEREES_QUERY = '''
+    INSERT INTO referees (id, name, country_name)
+    SELECT
+        %s AS id,
+        %s AS name,
+        %s AS country_name
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM referees
+        WHERE id = %s
+    )
+'''
+
+INSERT_MATCHES_QUERY = '''
+    INSERT INTO matches (match_id, match_date, kick_off, competition_id,
+    season_id, home_team_id, away_team_id, home_score, away_score, match_week,
+    competition_stage_name, stadium_id, referee_id)
+    SELECT
+        %s AS match_id,
+        %s AS match_date,
+        %s AS kick_off,
+        %s AS competition_id,
+        %s AS season_id,
+        %s AS home_team_id,
+        %s AS away_team_id,
+        %s AS home_score,
+        %s AS away_score,
+        %s AS match_week,
+        %s AS competition_stage_name,
+        %s AS stadium_id,
+        %s AS referee_id
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM matches
+        WHERE match_id = %s
     );
 '''
 
@@ -179,6 +315,7 @@ cur.execute(CREATE_TABLES_QUERY) # execute the CREATE TABLE statement
 conn.commit() # commit the transaction
 
 # prepare and execute the INSERT statement for each item in valid_comp_data
+print('Populating PostgreSQL from competitions.json...')
 for comp in valid_comp_data:
     # populate the seasons table
     season_id = comp['season_id']
@@ -186,22 +323,88 @@ for comp in valid_comp_data:
     cur.execute(INSERT_SEASONS_QUERY, seasons_values)
 
     # populate the competitions table
-    comp_id = comp['competition_id']
-    comp_values = (comp_id, comp['season_id'], comp['country_name'],
-                   comp['competition_name'], comp['competition_gender'],
-                   comp['competition_youth'],
-                   comp['competition_international'], comp['season_name'],
-                   comp_id)
+    season_name = comp['season_name']
+    comp_values = (comp['competition_id'], comp['season_id'],
+                   comp['country_name'], comp['competition_name'],
+                   comp['competition_gender'], comp['competition_youth'],
+                   comp['competition_international'], season_name,
+                   season_name)
     cur.execute(INSERT_COMPS_QUERY, comp_values)
 
+conn.commit() # commit the transaction
 print('Populated the seasons table.')
 print('Populated the competitions table.')
+print()
 
+# NOTE: managers in teams are optional
+# NOTE: stadium in matches are optional
+# NOTE: referees are optional
+print('Populating PostgreSQL from matches.json...')
 for match in matches_data:
-    print(match)
-    print()
+    # populate the managers table
+    insert_managers(match, 'home_team')
+    insert_managers(match, 'away_team')
+
+    # populate the teams table
+    insert_teams(match, 'home_team')
+    insert_teams(match, 'away_team')
+
+    # populate the stadiums table
+    if 'stadium' in match:
+        stadium = match['stadium']
+        stadium_id = stadium['id']
+        stadium_values = (stadium_id, stadium['name'], stadium['country']['name'],
+                        stadium_id)
+        cur.execute(INSERT_STADIUMS_QUERY, stadium_values)
+
+    # populate the referees table
+    if 'referee' in match:
+        referee = match['referee']
+        referee_id = referee['id']
+        referee_values = (referee_id, referee['name'],
+                          referee['country']['name'], referee_id)
+        cur.execute(INSERT_REFEREES_QUERY, referee_values)
+
+    # populate the matches table
+    match_id = match['match_id']
+    stadium_id, referee_id = None, None
+    if 'stadium' in match:
+        stadium_id = match['stadium']['id']
+    if 'referee' in match:
+        referee_id = match['referee']['id']
+    match_values = (match_id, match['match_date'], match['kick_off'],
+                    match['competition']['competition_id'],
+                    match['season']['season_id'],
+                    match['home_team']['home_team_id'],
+                    match['away_team']['away_team_id'],
+                    match['home_score'], match['away_score'],
+                    match['match_week'],
+                    match['competition_stage']['name'], stadium_id,
+                    referee_id, match_id)
+    cur.execute(INSERT_MATCHES_QUERY, match_values)
 
 conn.commit() # commit the transaction
+print('Populated the managers table.')
+print('Populated the teams table.')
+print('Populated the stadiums table.')
+print('Populated the referees table.')
+print('Populated the matches table.')
+print()
+
+print('Populating PostreSQL from lineups.json...')
+print()
+test = lineups_data[0]
+print(test)
+for key in test.keys():
+    print(key)
+print()
+for elem in test['lineup']:
+    print(elem)
+    print()
+lineup_length = []
+for lineup in lineups_data:
+    lineup_length.append(len(lineup['lineup']))
+print(lineup_length)
 
 # close the cursor and connection
 cur.close()
