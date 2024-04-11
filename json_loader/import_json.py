@@ -26,7 +26,7 @@ def import_json_from_github(path : str) -> list:
         print(f'Failed to fetch {path} from GitHub with status code {response.status_code}.')
         return
 
-def get_json_data_from_paths(paths : list[str]) -> list:
+def get_json_data_from_paths(paths : list[str], add_match_id=False) -> list:
     '''
     Returns a list of data fetched from JSON files at the specified paths.
 
@@ -40,9 +40,16 @@ def get_json_data_from_paths(paths : list[str]) -> list:
     data = []
     for path in paths:
         json_data = import_json_from_github(path)
+        if add_match_id:
+            match_id = int(path.split('/')[1].replace('.json', ''))
+            for i in range(0, len(json_data)):
+                json_data[i]['match_id'] = match_id
         if json_data:
             data.extend(json_data)
     return data
+
+print('Fetching data from GitHub...')
+print()
 
 # get the competitions data
 comp_data = get_json_data_from_paths(['competitions.json'])
@@ -76,7 +83,7 @@ for match in matches_data:
     events_paths.append(f'events/{match_id}.json')
 
 # get the lineups data
-lineups_data = get_json_data_from_paths(lineups_paths)
+lineups_data = get_json_data_from_paths(lineups_paths, True)
 print(f'Fetched lineups data from GitHub (length: {len(lineups_data)}).')
 
 # # get the events data
@@ -107,6 +114,12 @@ def insert_teams(match : dict, team : str):
                    team_dict[team + '_gender'], team_dict[team + '_group'],
                    team_dict['country']['name'], manager_id, team_id)
     cur.execute(INSERT_TEAMS_QUERY, team_values)
+
+def get_interval(timestamp : str) -> str:
+    if timestamp:
+        minutes, seconds = timestamp.split(':')
+        return f'{minutes} minutes {seconds} seconds'
+    return None
 
 # connect to PostgreSQL database
 conn = psycopg2.connect(
@@ -181,15 +194,51 @@ CREATE_TABLES_QUERY = '''
         FOREIGN KEY (stadium_id) REFERENCES stadiums (id),
         FOREIGN KEY (referee_id) REFERENCES referees (id)
     );
+    CREATE TABLE IF NOT EXISTS lineups (
+        match_id INT,
+        team_id INT,
+        team_name VARCHAR(255),
+        lineup INT[],
+        FOREIGN KEY (match_id) REFERENCES matches (match_id)
+    );
+    CREATE TABLE IF NOT EXISTS players (
+        match_id INT,
+        player_id INT,
+        player_name VARCHAR(255),
+        player_nickname VARCHAR(255),
+        jersey_number INT,
+        country_name VARCHAR(255),
+        cards INT[],
+        positions INT[],
+        PRIMARY KEY (match_id, player_id)
+    );
+    CREATE TABLE IF NOT EXISTS cards (
+        match_id INT,
+        player_id INT,
+        card_id INT,
+        time INTERVAL,
+        card_type VARCHAR(255),
+        reason VARCHAR(255),
+        period INT,
+        PRIMARY KEY (card_id),
+        FOREIGN KEY (match_id) REFERENCES matches (match_id),
+        FOREIGN KEY (match_id, player_id) REFERENCES players (match_id, player_id)
+    );
+    CREATE TABLE IF NOT EXISTS positions (
+        match_id INT,
+        player_id INT,
+        position_id INT,
+        position VARCHAR(255),
+        from_time INTERVAL,
+        to_time INTERVAL,
+        from_period INT,
+        to_period INT,
+        start_reason VARCHAR(255),
+        end_reason VARCHAR(255),
+        FOREIGN KEY (match_id) REFERENCES matches (match_id),
+        FOREIGN KEY (match_id, player_id) REFERENCES players (match_id, player_id)
+    );
 '''
-
-# CREATE TABLE IF NOT EXISTS players (
-#         player_id INT PRIMARY KEY,
-#         player_name VARCHAR(255),
-#         player_nickname VARCHAR(255),
-#         jersey_number INT,
-#         country_name VARCHAR(255)
-#     );
 
 # FIXME: i can't add this as a FK because competition_id is not unique in the competitions table
 # FOREIGN KEY (competition_id) REFERENCES competitions (competition_id),
@@ -309,6 +358,78 @@ INSERT_MATCHES_QUERY = '''
     );
 '''
 
+INSERT_LINEUPS_QUERY = '''
+    INSERT INTO lineups (match_id, team_id, team_name, lineup)
+    SELECT
+        %s AS match_id,
+        %s AS team_id,
+        %s AS team_name,
+        %s AS lineup
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM lineups
+        WHERE match_id = %s AND team_id = %s
+    );
+'''
+
+INSERT_PLAYERS_QUERY = '''
+    INSERT INTO players (match_id, player_id, player_name, player_nickname,
+    jersey_number, country_name, cards, positions)
+    SELECT
+        %s AS match_id,
+        %s AS player_id,
+        %s AS player_name,
+        %s AS player_nickname,
+        %s AS jersey_number,
+        %s AS country_name,
+        %s AS cards,
+        %s AS positions
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM players
+        WHERE match_id = %s AND player_id = %s
+    );
+'''
+
+INSERT_CARDS_QUERY = '''
+    INSERT INTO cards (match_id, player_id, card_id, time, card_type, reason,
+    period)
+    SELECT
+        %s AS match_id,
+        %s AS player_id,
+        %s AS card_id,
+        %s AS time,
+        %s AS card_type,
+        %s AS reason,
+        %s AS period
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM cards
+        WHERE match_id = %s AND player_id = %s AND card_id = %s
+    )
+'''
+
+INSERT_POSITIONS_QUERY = '''
+    INSERT INTO positions (match_id, player_id, position_id, position,
+    from_time, to_time, from_period, to_period, start_reason, end_reason)
+    SELECT
+        %s AS match_id,
+        %s AS player_id,
+        %s AS position_id,
+        %s AS position,
+        %s AS from_time,
+        %s AS to_time,
+        %s AS from_period,
+        %s AS to_period,
+        %s AS start_reason,
+        %s AS end_reason
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM positions
+        WHERE match_id = %s AND player_id = %s AND position_id = %s
+    )
+'''
+
 cur = conn.cursor() # a cursor object to execute SQL commands
 
 cur.execute(CREATE_TABLES_QUERY) # execute the CREATE TABLE statement
@@ -393,18 +514,69 @@ print()
 
 print('Populating PostreSQL from lineups.json...')
 print()
-test = lineups_data[0]
-print(test)
-for key in test.keys():
-    print(key)
-print()
-for elem in test['lineup']:
-    print(elem)
-    print()
-lineup_length = []
+card_id = 1     # create id numbers to add to the cards table
 for lineup in lineups_data:
-    lineup_length.append(len(lineup['lineup']))
-print(lineup_length)
+    match_id = lineup['match_id']
+    players = lineup['lineup']
+
+    # populate lineups table
+    team_id = lineup['team_id']
+    player_ids = [ p['player_id'] for p in players ]
+    lineups_values = (match_id, team_id, lineup['team_name'], player_ids,
+                      match_id, team_id)
+    cur.execute(INSERT_LINEUPS_QUERY, lineups_values)
+
+    for player in players:
+        player_id = player['player_id']
+
+        # process info regarding the player's cards
+        cards = player['cards']
+        card_ids = [] # card ids associated with the player
+        card_values = [] # values associated with each card
+        for card in cards:
+            card_values.append((match_id, player_id, card_id,
+                                get_interval(card['time']), card['card_type'],
+                                card['reason'], card['period'], match_id,
+                                player_id, card_id))
+            card_ids.append(card_id)
+            card_id += 1
+
+        # process info regarding the player's positions
+        positions = player['positions']
+        position_ids = [] # position ids associated with the player
+        position_values = [] # values associated with each position
+        for position in positions:
+            position_id = position['position_id']
+            position_values.append((match_id, player_id, position_id,
+                                   position['position'],
+                                   get_interval(position['from']),
+                                   get_interval(position['to']),
+                                   position['from_period'],
+                                   position['to_period'],
+                                   position['start_reason'],
+                                   position['end_reason'], match_id,
+                                   player_id, position_id))
+
+        # populate the players table
+        player_values = (match_id, player_id, player['player_name'],
+                         player['player_nickname'], player['jersey_number'],
+                         player['country']['name'], card_ids, position_ids,
+                         match_id, player_id)
+        cur.execute(INSERT_PLAYERS_QUERY, player_values)
+
+        # populate the cards table
+        for values in card_values:
+            cur.execute(INSERT_CARDS_QUERY, values)
+
+        # populate the positions table
+        for values in position_values:
+            cur.execute(INSERT_POSITIONS_QUERY, values)
+
+conn.commit() # commit the transaction
+print('Populated the lineups table.')
+print('Populated the cards table.')
+print('Populated the players table.')
+print()
 
 # close the cursor and connection
 cur.close()
