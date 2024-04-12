@@ -1,0 +1,75 @@
+1. Divide the goal into 6 equal-size areas (top-left, top-middle, top-right, bottom-left, bottom-middle, and bottom-right). 
+In the La Liga seasons of 2020/2021, 2019/2020, and 2018/2019 combined, find the players who shot the most in either the top-left or 
+top-right corners. Sort them from highest to lowest.
+
+Given the coordinates of the goal, bottom right is (120, 36, 0), bottom left is (120, 44, 0), top left is (120, 36, 2.67) and top right (120, 44, 2.67).
+The length of the goal is 44 - 36 = 8. 8/3 = 2.667 would give us a third of the length of the goal.
+The height of the goal is 2.67. 2.67/2 = 1.335 would give us the height at half the goal.
+
+These are the coordinates of the top left area:
+120, 36, 2.67               120, 38.667,2.67
+|---------------------------------|
+|                                 |
+|                                 |
+|                                 |
+|                                 | 
+|---------------------------------|
+120, 36, 1.335              120, 38.667, 1.335
+
+These are the coordinates of the top right area:
+120, 41.334, 2.67               120, 44, 2.67
+|---------------------------------|
+|                                 |
+|                                 |
+|                                 |
+|                                 | 
+|---------------------------------|
+120, 41.334, 1.335              120, 44, 1.335
+
+SELECT p.*, COUNT(*) AS num_corner_shots
+FROM players p
+JOIN events e ON p.player_id = e.player_id
+JOIN matches m ON m.match_id = e.match_id
+JOIN competitions c ON c.competition_id = m.competition_id AND m.season_id = c.season_id
+JOIN shot_events s ON s.event_id = e.id
+WHERE c.competition_name = 'La Liga'
+    AND c.season_name IN ('2020/2021', '2019/2020', '2018/2019')
+    AND ((array_length(s.end_location, 1) = 2
+        AND s.end_location[1] = 120
+        AND s.end_location[2] BETWEEN 41.334 AND 44)
+        OR 
+        (array_length(s.end_location, 1) = 3
+        AND s.end_location[1] = 120
+        AND s.end_location[2] BETWEEN 41.334 AND 44
+        AND s.end_location[3] BETWEEN 1.335 AND 2.67
+        )
+    )
+GROUP BY p.player_name
+ORDER BY num_corner_shots DESC;
+
+
+
+2. In the La Liga season of 2020/2021, find the teams with the most successful passes into the box. Sort them from the highest to lowest.
+
+Assuming the box is the penalty area (18 yard box):
+Coordinates of the boxes:
+(0, 10) (10, 10)
+(0, 62) (10, 62)
+
+(102,18) (120,18)
+(102,62) (120,62)
+
+SELECT t.team_name, COUNT(*) AS num_box_passes
+FROM teams t
+JOIN events e ON p.player_id = e.player_id
+JOIN matches m ON m.match_id = e.match_id
+JOIN competitions c ON c.competition_id = m.competition_id AND m.season_id = c.season_id
+JOIN pass_events pe ON pe.event_id = e.id
+WHERE c.competition_name = 'La Liga'
+    AND c.season_name = '2020/2021'
+    AND (s.end_location[1] BETWEEN 0 AND 10
+        OR s.end_location[1] BETWEEN 102 AND 120)
+    AND (s.end_location[2] BETWEEN 10 AND 62
+        OR s.end_location[2] BETWEEN 18 AND 62)
+GROUP BY t.team_name
+ORDER BY num_box_passes DESC;
