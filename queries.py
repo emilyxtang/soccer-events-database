@@ -32,7 +32,9 @@ For the user "postgres", you must MANUALLY set the password to 1234.
 root_database_name = "project_database"
 query_database_name = "query_database"
 db_username = 'postgres'
-db_password = '1234'
+# FIXME: CHANGE THIS BACK TO 1234
+# db_password = '1234'
+db_password = 'postgres'
 db_host = 'localhost'
 db_port = '5432'
 
@@ -168,7 +170,19 @@ def Q_1(cursor, conn, execution_time):
     #==========================================================================
     # Enter QUERY within the quotes:
 
-    query = """ """
+    # query = """ """
+
+    query = '''
+        SELECT p.name, AVG(s.statsbomb_xg) AS avg_xgScore
+        FROM players p
+        JOIN events e ON p.player_id = e.player_id
+        JOIN matches m ON m.match_id = e.match_id
+        JOIN competitions c ON c.competition_id = m.competition_id AND c.season_id = m.season_id
+        JOIN shot_events s ON s.event_id = e.id
+        WHERE c.competition_name = 'La Liga' AND c.season_name = '2020/2021' AND s.statsbomb_xg > 0
+        GROUP BY p.player_name
+        ORDER BY avg_xgScore DESC;
+    '''
 
     # SELECT p.name, AVG(s.statsbomb_xg) AS avg_xgScore
     # FROM players p

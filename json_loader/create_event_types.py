@@ -1,6 +1,6 @@
 create_fifty_fifty_table = '''
     CREATE TABLE IF NOT EXISTS "50_50_events" (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         outcome_name VARCHAR(255),
         counterpress BOOLEAN
     );
@@ -8,21 +8,21 @@ create_fifty_fifty_table = '''
 
 create_bad_behaviour_table = '''
     CREATE TABLE IF NOT EXISTS bad_behaviour_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         card_name VARCHAR(255)
     );
 '''
 
 create_ball_receipt_table = '''
     CREATE TABLE IF NOT EXISTS ball_receipt_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         outcome_name VARCHAR(255)
     );
 '''
 
 create_ball_recovery_table = '''
     CREATE TABLE IF NOT EXISTS ball_recovery_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         offensive BOOLEAN,
         recovery_failure BOOLEAN
     );
@@ -30,7 +30,7 @@ create_ball_recovery_table = '''
 
 create_block_table = '''
     CREATE TABLE IF NOT EXISTS block_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         deflection BOOLEAN,
         offensive BOOLEAN,
         save_block BOOLEAN,
@@ -40,14 +40,14 @@ create_block_table = '''
 
 create_carry_table = '''
     CREATE TABLE IF NOT EXISTS carry_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         end_location INT[]
     );
 '''
 
 create_clearance_table = '''
     CREATE TABLE IF NOT EXISTS clearance_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         aerial_won BOOLEAN,
         body_part_name VARCHAR(255)   
     );
@@ -55,7 +55,7 @@ create_clearance_table = '''
 
 create_dribble_table = '''
     CREATE TABLE IF NOT EXISTS dribble_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         overrun BOOLEAN,
         nutmeg BOOLEAN,
         outcome_name VARCHAR(255),
@@ -65,14 +65,14 @@ create_dribble_table = '''
 
 create_dribbled_past_table = '''
     CREATE TABLE IF NOT EXISTS dribbled_past_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         counterpress BOOLEAN
     );
 '''
 
 create_duel_table = '''
     CREATE TABLE IF NOT EXISTS duel_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         counterpress BOOLEAN,
         type_name VARCHAR(255),
         outcome_name VARCHAR(255)
@@ -81,7 +81,7 @@ create_duel_table = '''
 
 create_foul_committed_table = '''
     CREATE TABLE IF NOT EXISTS foul_committed_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         counterpress BOOLEAN,
         offensive BOOLEAN,
         type_name VARCHAR(255),
@@ -93,7 +93,7 @@ create_foul_committed_table = '''
 
 create_foul_won_table = '''
     CREATE TABLE IF NOT EXISTS foul_won_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         defensive BOOLEAN,
         offensive BOOLEAN,
         penalty BOOLEAN
@@ -102,7 +102,7 @@ create_foul_won_table = '''
 
 create_goalkeeper_table = '''
     CREATE TABLE IF NOT EXISTS goalkeeper_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         position_name VARCHAR(255),
         technique_name VARCHAR(255),
         body_part_name VARCHAR(255),
@@ -113,7 +113,7 @@ create_goalkeeper_table = '''
 
 create_half_end_table = '''
     CREATE TABLE IF NOT EXISTS half_end_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         early_video_end BOOLEAN,
         match_suspended BOOLEAN
     );
@@ -121,41 +121,41 @@ create_half_end_table = '''
 
 create_half_start_table = '''
     CREATE TABLE IF NOT EXISTS half_start_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         late_video_start BOOLEAN
     );
 '''
 
 create_injury_stoppage_table = '''
     CREATE TABLE IF NOT EXISTS injury_stoppage_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         in_chain BOOLEAN
     );
 '''
 
 create_interception_table = '''
     CREATE TABLE IF NOT EXISTS interception_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         outcome_name VARCHAR(255)
     );
 '''
 
 create_miscontrol_table = '''
     CREATE TABLE IF NOT EXISTS miscontrol_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         aerial_won BOOLEAN
     );
 '''
 
 create_pass_table = '''
     CREATE TABLE IF NOT EXISTS pass_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         recipient_id INT,
         length DECIMAL(10, 5),
         angle DECIMAL(10, 5),
         height_name VARCHAR(255),
         end_location DECIMAL[],
-        assisted_shot_id UUID,
+        assisted_shot_id VARCHAR(255),
         backheel BOOLEAN,
         deflected BOOLEAN,
         miscommunication BOOLEAN,
@@ -173,22 +173,22 @@ create_pass_table = '''
 
 create_player_off_table = '''
     CREATE TABLE IF NOT EXISTS player_off_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         permanent BOOLEAN
     );
 '''
 
 create_pressure_table = '''
     CREATE TABLE IF NOT EXISTS pressure_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         counterpress BOOLEAN
     );
 '''
 
 create_shot_table = '''
     CREATE TABLE IF NOT EXISTS shot_events (
-        event_id UUID PRIMARY KEY,
-        key_pass_id UUID,
+        event_id VARCHAR(255) PRIMARY KEY,
+        key_pass_id VARCHAR(255),
         end_location DECIMAL[],
         aerial_won BOOLEAN,
         follows_dribble BOOLEAN,
@@ -206,7 +206,7 @@ create_shot_table = '''
 
 create_substitution_table = '''
     CREATE TABLE IF NOT EXISTS substitution_events (
-        event_id UUID PRIMARY KEY,
+        event_id VARCHAR(255) PRIMARY KEY,
         replacement_name VARCHAR(255),
         outcome_name VARCHAR(255)
     );
