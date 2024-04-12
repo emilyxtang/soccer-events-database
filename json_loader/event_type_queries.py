@@ -194,8 +194,8 @@ insert_foul_committed_table = '''
         %s AS card_name
 ''' + add_where_not_exists('foul_committed_events')
 
-create_foul_table = '''
-    CREATE TABLE IF NOT EXISTS foul_events (
+create_foul_won_table = '''
+    CREATE TABLE IF NOT EXISTS foul_won_events (
         event_id UUID PRIMARY KEY,
         defensive BOOLEAN,
         offensive BOOLEAN,
@@ -203,14 +203,14 @@ create_foul_table = '''
     );
 '''
 
-insert_foul_table = '''
+insert_foul_won_table = '''
     INSERT INTO (event_id, defensive, offensive, penalty)
     SELECT
         %s AS event_id,
         %s AS defensive,
         %s AS offensive,
         %s AS penalty
-''' + add_where_not_exists('foul_events')
+''' + add_where_not_exists('foul_won_events')
 
 create_goalkeeper_table = '''
     CREATE TABLE IF NOT EXISTS goalkeeper_events (
@@ -357,3 +357,98 @@ insert_pass_table = '''
         %s AS outcome_name,
         %s AS technique_name
 ''' + add_where_not_exists('pass_events')
+
+create_player_off_table = '''
+    CREATE TABLE IF NOT EXISTS player_off_events (
+        event_id UUID PRIMARY KEY,
+        permanent BOOLEAN
+    );
+'''
+
+insert_player_off_table = '''
+    INSERT INTO (event_id, permanent)
+    SELECT
+        %s AS event_id,
+        %s AS permanent
+''' + add_where_not_exists('player_off_events')
+
+create_pressure_table = '''
+    CREATE TABLE IF NOT EXISTS pressure_events (
+        event_id UUID PRIMARY KEY,
+        counterpress BOOLEAN
+    );
+'''
+
+insert_pressure_table = '''
+    INSERT INTO (event_id, counterpress)
+    SELECT
+        %s AS event_id,
+        %s AS counterpress
+''' + add_where_not_exists('pressure_events')
+
+create_shot_table = '''
+    CREATE TABLE IF NOT EXISTS shot_events (
+        event_id UUID PRIMARY KEY,
+        key_pass_id UUID,
+        end_location INT[],
+        aerial_won BOOLEAN,
+        follows_dribble BOOLEAN,
+        first_time BOOLEAN,
+        freeze_frame JSONB,
+        open_goal BOOLEAN,
+        statsbomb_xg DECIMAL(10, 10),
+        deflected BOOLEAN,
+        technique_name VARCHAR(255),
+        body_part_name VARCHAR(255),
+        type_name VARCHAR(255),
+        outcome_name VARCHAR(255)
+    );
+'''
+
+insert_shot_table = '''
+    INSERT INTO (event_id, key_pass_id, end_location, aerial_won,
+    follows_dribble, first_time, freeze_frame, open_goal, statsbomb_xg,
+    deflected, technique_name, body_part_name, type_name, outcome_name)
+    SELECT
+        %s AS event_id,
+        %s AS key_pass_id,
+        %s AS end_location,
+        %s AS aerial_won,
+        %s AS follows_dribble,
+        %s AS first_time,
+        %s AS freeze_frame,
+        %s AS open_goal,
+        %s AS statsbomb_xg,
+        %s AS deflected,
+        %s AS technique_name,
+        %s AS body_part_name,
+        %s AS type_name,
+        %s AS outcome_name
+''' + add_where_not_exists('shot_events')
+
+create_substitution_table = '''
+    CREATE TABLE IF NOT EXISTS substitution_events (
+        event_id UUID PRIMARY KEY,
+        replacement_name VARCHAR(255),
+        outcome_name VARCHAR(255)
+    );
+'''
+
+insert_substitution_table = '''
+    INSERT INTO (event_id, replacement_name, outcome_name)
+    SELECT
+        %s AS event_id,
+        %s AS replacement_name,
+        %s AS outcome_name
+''' + add_where_not_exists('substitution_events')
+
+create_event_type_tables = create_50_50_table + create_bad_behaviour_table \
+    + create_ball_receipt_table + create_ball_recovery_table \
+    + create_block_table + create_carry_table + create_clearance_table \
+    + create_dribble_table + create_dribbled_past_table + create_duel_table \
+    + create_foul_committed_table + create_foul_won_table \
+    + create_goalkeeper_table + create_half_end_table \
+    + create_half_start_table + create_injury_stoppage_table \
+    + create_interception_table + create_miscontrol_table \
+    + create_pass_table + create_player_off_table + create_pressure_table \
+    + create_shot_table + create_substitution_table
