@@ -1,7 +1,7 @@
 import psycopg2
 import requests
 
-import event_type_queries as etypes
+import create_event_types as create
 
 # import github data only from these seasons
 VALID_SEASONS = {
@@ -578,17 +578,17 @@ print('Populated the cards table.')
 print('Populated the players table.')
 print()
 
-# print('Populating PostreSQL from events.json...')
+print('Populating PostreSQL from events.json...')
 
-# test = events_data[0]
+test = events_data[0]
 
-# print()
-# print('keys')
-# print(test.keys())
-# print()
+print()
+print('keys')
+print(test.keys())
+print()
 
-# print(test)
-# print()
+print(test)
+print()
 
 # close the cursor and connection
 cur.close()
