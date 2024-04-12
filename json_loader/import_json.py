@@ -1,6 +1,8 @@
 import psycopg2
 import requests
 
+import event_type_queries as etypes
+
 # import github data only from these seasons
 VALID_SEASONS = {
     'La Liga': ['2018/2019', '2019/2020', '2020/2021'],
@@ -40,16 +42,15 @@ def get_json_data_from_paths(paths : list[str], add_match_id=False) -> list:
     data = []
     for path in paths:
         json_data = import_json_from_github(path)
-        if add_match_id:
-            match_id = int(path.split('/')[1].replace('.json', ''))
-            for i in range(0, len(json_data)):
-                json_data[i]['match_id'] = match_id
         if json_data:
+            if add_match_id:
+                match_id = int(path.split('/')[1].replace('.json', ''))
+                for i in range(0, len(json_data)):
+                    json_data[i]['match_id'] = match_id
             data.extend(json_data)
     return data
 
 print('Fetching data from GitHub...')
-print()
 
 # get the competitions data
 comp_data = get_json_data_from_paths(['competitions.json'])
@@ -86,12 +87,12 @@ for match in matches_data:
 lineups_data = get_json_data_from_paths(lineups_paths, True)
 print(f'Fetched lineups data from GitHub (length: {len(lineups_data)}).')
 
-# # get the events data
-# events_data = get_json_data_from_paths(events_paths)
-# print(f'Fetched events data from GitHub (length: {len(events_data)}).')
+# get the events data
+events_data = get_json_data_from_paths(events_paths, True)
+print(f'Fetched events data from GitHub (length: {len(events_data)}).')
 print()
 
-# TESTING ADDING AND CONNECTING TO THE POSTGRESQL DB -------------------------
+# ADDING AND CONNECTING TO THE POSTGRESQL DB ---------------------------------
 print('Starting to populate tables in PostgreSQL...')
 print()
 
@@ -513,7 +514,6 @@ print('Populated the matches table.')
 print()
 
 print('Populating PostreSQL from lineups.json...')
-print()
 card_id = 1     # create id numbers to add to the cards table
 for lineup in lineups_data:
     match_id = lineup['match_id']
@@ -577,6 +577,18 @@ print('Populated the lineups table.')
 print('Populated the cards table.')
 print('Populated the players table.')
 print()
+
+# print('Populating PostreSQL from events.json...')
+
+# test = events_data[0]
+
+# print()
+# print('keys')
+# print(test.keys())
+# print()
+
+# print(test)
+# print()
 
 # close the cursor and connection
 cur.close()

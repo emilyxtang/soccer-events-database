@@ -1,0 +1,13 @@
+create_table = '''
+    CREATE TABLE IF NOT EXISTS _events (
+        event_id UUID PRIMARY KEY,
+        
+    );
+'''
+
+insert_table = '''
+    INSERT INTO (event_id, )
+    SELECT
+        %s AS event_id,
+        %s AS 
+''' + add_where_not_exists('_events')
