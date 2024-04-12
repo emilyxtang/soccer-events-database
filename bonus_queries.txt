@@ -71,5 +71,6 @@ WHERE c.competition_name = 'La Liga'
         OR s.end_location[1] BETWEEN 102 AND 120)
     AND (s.end_location[2] BETWEEN 10 AND 62
         OR s.end_location[2] BETWEEN 18 AND 62)
+    AND s.outcome_name = NULL
 GROUP BY t.team_name
 ORDER BY num_box_passes DESC;
