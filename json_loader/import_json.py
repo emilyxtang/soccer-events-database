@@ -1,7 +1,11 @@
 import psycopg2
 import requests
+import uuid
 
+import create_tables as c
+import insert_tables as i
 import create_event_types as create
+import populate_event_types as populate
 
 # import github data only from these seasons
 VALID_SEASONS = {
@@ -92,7 +96,7 @@ events_data = get_json_data_from_paths(events_paths, True)
 print(f'Fetched events data from GitHub (length: {len(events_data)}).')
 print()
 
-# ADDING AND CONNECTING TO THE POSTGRESQL DB ---------------------------------
+# ADDING AND CONNECTING TO THE POSTGRESQL DB =================================
 print('Starting to populate tables in PostgreSQL...')
 print()
 
@@ -103,7 +107,7 @@ def insert_managers(match : dict, team : str):
         manager_values = (manager_id, manager['name'], manager['nickname'],
                         manager['dob'], manager['country']['name'],
                         manager_id)
-        cur.execute(INSERT_MANAGERS_QUERY, manager_values)
+        cur.execute(i.managers_query, manager_values)
 
 def insert_teams(match : dict, team : str):
     team_dict = match[team]
@@ -114,7 +118,7 @@ def insert_teams(match : dict, team : str):
     team_values = (team_id, team_dict[team + '_name'],
                    team_dict[team + '_gender'], team_dict[team + '_group'],
                    team_dict['country']['name'], manager_id, team_id)
-    cur.execute(INSERT_TEAMS_QUERY, team_values)
+    cur.execute(i.teams_query, team_values)
 
 def get_interval(timestamp : str) -> str:
     if timestamp:
@@ -131,309 +135,12 @@ conn = psycopg2.connect(
     port='5432'
 )
 
-# define the CREATE TABLE statement
-CREATE_TABLES_QUERY = '''
-    CREATE TABLE IF NOT EXISTS seasons (
-        season_id INT PRIMARY KEY,
-        season_name VARCHAR(9)
-    );
-    CREATE TABLE IF NOT EXISTS competitions (
-        id SERIAL PRIMARY KEY,
-        competition_id INT,
-        season_id INT,
-        country_name VARCHAR(255),
-        competition_name VARCHAR(255),
-        competition_gender VARCHAR(255),
-        competition_youth BOOLEAN,
-        competition_international BOOLEAN,
-        season_name VARCHAR(9),
-        FOREIGN KEY (season_id) REFERENCES seasons (season_id)
-    );
-    CREATE TABLE IF NOT EXISTS managers (
-        id INT PRIMARY KEY,
-        name VARCHAR(255),
-        nickname VARCHAR(255),
-        dob DATE,
-        country_name VARCHAR(255)     
-    );
-    CREATE TABLE IF NOT EXISTS teams (
-        team_id INT PRIMARY KEY,
-        team_name VARCHAR(255),
-        team_gender VARCHAR(255),
-        team_group VARCHAR(255),
-        country_name VARCHAR(255),
-        manager_id INT,
-        FOREIGN KEY (manager_id) REFERENCES managers (id)
-    );
-    CREATE TABLE IF NOT EXISTS stadiums (
-        id INT PRIMARY KEY,
-        name VARCHAR(255),
-        country_name VARCHAR(255)
-    );
-    CREATE TABLE IF NOT EXISTS referees (
-        id INT PRIMARY KEY,
-        name VARCHAR(255),
-        country_name VARCHAR(255)
-    );
-    CREATE TABLE IF NOT EXISTS matches (
-        match_id INT PRIMARY KEY,
-        match_date DATE,
-        kick_off TIME,
-        competition_id INT,
-        season_id INT,
-        home_team_id INT,
-        away_team_id INT,
-        home_score INT,
-        away_score INT,
-        match_week INT,
-        competition_stage_name VARCHAR(255),
-        stadium_id INT,
-        referee_id INT,
-        FOREIGN KEY (season_id) REFERENCES seasons (season_id),
-        FOREIGN KEY (home_team_id) REFERENCES teams (team_id),
-        FOREIGN KEY (away_team_id) REFERENCES teams (team_id),
-        FOREIGN KEY (stadium_id) REFERENCES stadiums (id),
-        FOREIGN KEY (referee_id) REFERENCES referees (id)
-    );
-    CREATE TABLE IF NOT EXISTS lineups (
-        match_id INT,
-        team_id INT,
-        team_name VARCHAR(255),
-        lineup INT[],
-        FOREIGN KEY (match_id) REFERENCES matches (match_id)
-    );
-    CREATE TABLE IF NOT EXISTS players (
-        match_id INT,
-        player_id INT,
-        player_name VARCHAR(255),
-        player_nickname VARCHAR(255),
-        jersey_number INT,
-        country_name VARCHAR(255),
-        cards INT[],
-        positions INT[],
-        PRIMARY KEY (match_id, player_id)
-    );
-    CREATE TABLE IF NOT EXISTS cards (
-        match_id INT,
-        player_id INT,
-        card_id INT,
-        time INTERVAL,
-        card_type VARCHAR(255),
-        reason VARCHAR(255),
-        period INT,
-        PRIMARY KEY (card_id),
-        FOREIGN KEY (match_id) REFERENCES matches (match_id),
-        FOREIGN KEY (match_id, player_id) REFERENCES players (match_id, player_id)
-    );
-    CREATE TABLE IF NOT EXISTS positions (
-        match_id INT,
-        player_id INT,
-        position_id INT,
-        position VARCHAR(255),
-        from_time INTERVAL,
-        to_time INTERVAL,
-        from_period INT,
-        to_period INT,
-        start_reason VARCHAR(255),
-        end_reason VARCHAR(255),
-        FOREIGN KEY (match_id) REFERENCES matches (match_id),
-        FOREIGN KEY (match_id, player_id) REFERENCES players (match_id, player_id)
-    );
-'''
-
 # FIXME: i can't add this as a FK because competition_id is not unique in the competitions table
 # FOREIGN KEY (competition_id) REFERENCES competitions (competition_id),
 
-INSERT_SEASONS_QUERY = '''
-    INSERT INTO seasons (season_id, season_name)
-    SELECT
-        %s AS season_id,
-        %s AS season_name
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM seasons
-        WHERE season_id = %s
-    );
-'''
-
-INSERT_COMPS_QUERY = '''
-    INSERT INTO competitions (competition_id, season_id, country_name,
-    competition_name, competition_gender, competition_youth,
-    competition_international, season_name)
-    SELECT
-        %s AS competition_id,
-        %s AS season_id,
-        %s AS country_name,
-        %s AS competition_name,
-        %s AS competition_gender,
-        %s AS competition_youth,
-        %s AS competition_international,
-        %s AS season_name
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM competitions
-        WHERE season_name = %s
-    );
-'''
-
-INSERT_MANAGERS_QUERY = '''
-    INSERT INTO managers (id, name, nickname, dob, country_name)
-    SELECT
-        %s AS id,
-        %s AS name,
-        %s AS nickname,
-        %s AS dob,
-        %s AS country_name
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM managers
-        WHERE id = %s
-    )
-'''
-
-INSERT_TEAMS_QUERY = '''
-    INSERT INTO teams (team_id, team_name, team_gender, team_group,
-    country_name, manager_id)
-    SELECT
-        %s AS team_id,
-        %s AS team_name,
-        %s AS team_gender,
-        %s AS team_group,
-        %s AS country_name,
-        %s AS manager_id
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM teams
-        WHERE team_id = %s
-    )
-'''
-
-INSERT_STADIUMS_QUERY = '''
-    INSERT INTO stadiums (id, name, country_name)
-    SELECT
-        %s AS id,
-        %s AS name,
-        %s AS country_name
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM stadiums
-        WHERE id = %s
-    )
-'''
-
-INSERT_REFEREES_QUERY = '''
-    INSERT INTO referees (id, name, country_name)
-    SELECT
-        %s AS id,
-        %s AS name,
-        %s AS country_name
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM referees
-        WHERE id = %s
-    )
-'''
-
-INSERT_MATCHES_QUERY = '''
-    INSERT INTO matches (match_id, match_date, kick_off, competition_id,
-    season_id, home_team_id, away_team_id, home_score, away_score, match_week,
-    competition_stage_name, stadium_id, referee_id)
-    SELECT
-        %s AS match_id,
-        %s AS match_date,
-        %s AS kick_off,
-        %s AS competition_id,
-        %s AS season_id,
-        %s AS home_team_id,
-        %s AS away_team_id,
-        %s AS home_score,
-        %s AS away_score,
-        %s AS match_week,
-        %s AS competition_stage_name,
-        %s AS stadium_id,
-        %s AS referee_id
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM matches
-        WHERE match_id = %s
-    );
-'''
-
-INSERT_LINEUPS_QUERY = '''
-    INSERT INTO lineups (match_id, team_id, team_name, lineup)
-    SELECT
-        %s AS match_id,
-        %s AS team_id,
-        %s AS team_name,
-        %s AS lineup
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM lineups
-        WHERE match_id = %s AND team_id = %s
-    );
-'''
-
-INSERT_PLAYERS_QUERY = '''
-    INSERT INTO players (match_id, player_id, player_name, player_nickname,
-    jersey_number, country_name, cards, positions)
-    SELECT
-        %s AS match_id,
-        %s AS player_id,
-        %s AS player_name,
-        %s AS player_nickname,
-        %s AS jersey_number,
-        %s AS country_name,
-        %s AS cards,
-        %s AS positions
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM players
-        WHERE match_id = %s AND player_id = %s
-    );
-'''
-
-INSERT_CARDS_QUERY = '''
-    INSERT INTO cards (match_id, player_id, card_id, time, card_type, reason,
-    period)
-    SELECT
-        %s AS match_id,
-        %s AS player_id,
-        %s AS card_id,
-        %s AS time,
-        %s AS card_type,
-        %s AS reason,
-        %s AS period
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM cards
-        WHERE match_id = %s AND player_id = %s AND card_id = %s
-    )
-'''
-
-INSERT_POSITIONS_QUERY = '''
-    INSERT INTO positions (match_id, player_id, position_id, position,
-    from_time, to_time, from_period, to_period, start_reason, end_reason)
-    SELECT
-        %s AS match_id,
-        %s AS player_id,
-        %s AS position_id,
-        %s AS position,
-        %s AS from_time,
-        %s AS to_time,
-        %s AS from_period,
-        %s AS to_period,
-        %s AS start_reason,
-        %s AS end_reason
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM positions
-        WHERE match_id = %s AND player_id = %s AND position_id = %s
-    )
-'''
-
 cur = conn.cursor() # a cursor object to execute SQL commands
 
-cur.execute(CREATE_TABLES_QUERY) # execute the CREATE TABLE statement
+cur.execute(c.create_tables_query) # execute the CREATE TABLE statement
 conn.commit() # commit the transaction
 
 # prepare and execute the INSERT statement for each item in valid_comp_data
@@ -442,7 +149,7 @@ for comp in valid_comp_data:
     # populate the seasons table
     season_id = comp['season_id']
     seasons_values = (season_id, comp['season_name'], season_id)
-    cur.execute(INSERT_SEASONS_QUERY, seasons_values)
+    cur.execute(i.seasons_query, seasons_values)
 
     # populate the competitions table
     season_name = comp['season_name']
@@ -451,7 +158,7 @@ for comp in valid_comp_data:
                    comp['competition_gender'], comp['competition_youth'],
                    comp['competition_international'], season_name,
                    season_name)
-    cur.execute(INSERT_COMPS_QUERY, comp_values)
+    cur.execute(i.competitions_query, comp_values)
 
 conn.commit() # commit the transaction
 print('Populated the seasons table.')
@@ -477,7 +184,7 @@ for match in matches_data:
         stadium_id = stadium['id']
         stadium_values = (stadium_id, stadium['name'], stadium['country']['name'],
                         stadium_id)
-        cur.execute(INSERT_STADIUMS_QUERY, stadium_values)
+        cur.execute(i.stadiums_query, stadium_values)
 
     # populate the referees table
     if 'referee' in match:
@@ -485,7 +192,7 @@ for match in matches_data:
         referee_id = referee['id']
         referee_values = (referee_id, referee['name'],
                           referee['country']['name'], referee_id)
-        cur.execute(INSERT_REFEREES_QUERY, referee_values)
+        cur.execute(i.referees_query, referee_values)
 
     # populate the matches table
     match_id = match['match_id']
@@ -503,7 +210,7 @@ for match in matches_data:
                     match['match_week'],
                     match['competition_stage']['name'], stadium_id,
                     referee_id, match_id)
-    cur.execute(INSERT_MATCHES_QUERY, match_values)
+    cur.execute(i.matches_query, match_values)
 
 conn.commit() # commit the transaction
 print('Populated the managers table.')
@@ -524,7 +231,7 @@ for lineup in lineups_data:
     player_ids = [ p['player_id'] for p in players ]
     lineups_values = (match_id, team_id, lineup['team_name'], player_ids,
                       match_id, team_id)
-    cur.execute(INSERT_LINEUPS_QUERY, lineups_values)
+    cur.execute(i.lineups_query, lineups_values)
 
     for player in players:
         player_id = player['player_id']
@@ -562,15 +269,15 @@ for lineup in lineups_data:
                          player['player_nickname'], player['jersey_number'],
                          player['country']['name'], card_ids, position_ids,
                          match_id, player_id)
-        cur.execute(INSERT_PLAYERS_QUERY, player_values)
+        cur.execute(i.players_query, player_values)
 
         # populate the cards table
         for values in card_values:
-            cur.execute(INSERT_CARDS_QUERY, values)
+            cur.execute(i.cards_query, values)
 
         # populate the positions table
         for values in position_values:
-            cur.execute(INSERT_POSITIONS_QUERY, values)
+            cur.execute(i.positions_query, values)
 
 conn.commit() # commit the transaction
 print('Populated the lineups table.')
@@ -578,16 +285,71 @@ print('Populated the cards table.')
 print('Populated the players table.')
 print()
 
+# create the event types tables
+cur.execute(create.event_type_tables_query)
+conn.commit() # commit the transaction
+
 print('Populating PostreSQL from events.json...')
+num_events = 1
+for event in events_data:
+    print(f'{num_events}/{len(events_data)}')
+    num_events += 1
+    id = event['id']
 
-test = events_data[0]
+    # populate the events table
+    player_id, position_id, location, duration, under_pressure, off_camera, \
+        out, related_events = None, None, None, None, None, None, None, None
+    if 'player' in event:
+        player_id = event['player']['id']
+    if 'position' in event:
+        position_id = event['position']['id']
+    if 'location' in event:
+        location = event['location']
+    if 'duration' in event:
+        duration = event['duration']
+    if 'under_pressure' in event:
+        under_pressure = event['under_pressure']
+    if 'off_camera' in event:
+        off_camera = event['off_camera']
+    if 'out' in event:
+        out = event['out']
+    if 'related_events' in event:
+        related_events = event['related_events']
+    event_values = (id, event['match_id'], event['index'],
+                    event['period'], event['timestamp'], event['minute'],
+                    event['type']['name'], event['possession'],
+                    event['possession_team']['id'],
+                    event['play_pattern']['name'], event['team']['id'],
+                    player_id, position_id, location, duration,
+                    under_pressure, off_camera, out, related_events, id)
+    cur.execute(i.events_query, event_values)
 
-print()
-print('keys')
-print(test.keys())
-print()
+    # populate the event types table
+    type_name = event['type']['name']
+    if type_name == '50/50' or type_name == 'Bad Behaviour' \
+        or type_name == 'Ball Receipt' or type_name == 'Ball Recovery' \
+        or type_name == 'Block' or type_name == 'Carry' \
+        or type_name == 'Clearance' or type_name == 'Dribble' \
+        or type_name == 'Dribbled Past' or type_name == 'Duel' \
+        or type_name == 'Foul Committed' or type_name == 'Foul Won' \
+        or type_name == 'Goal Keeper' or type_name == 'Half End*' \
+        or type_name == 'Half Start*' or type_name == 'Injury Stoppage' \
+        or type_name == 'Interception' or type_name == 'Miscontrol' \
+        or type_name == 'Pass' or type_name == 'Player Off' \
+        or type_name == 'Pressure' or type_name == 'Shot' \
+        or type_name == 'Substitution':
+        populate.event_type_tables(event)
 
-print(test)
+    # populate the tactics table
+    if 'tactics' in event:
+        tactics = event['tactics']
+        player_ids = [ p['player']['id'] for p in tactics['lineup'] ]
+        tactics_values = (id, event['tactics']['formation'], player_ids, id)
+
+conn.commit() # commit the transaction
+print('Populated the events table.')
+print('Populated the event types tables.')
+print('Populated the tactics table.')
 print()
 
 # close the cursor and connection

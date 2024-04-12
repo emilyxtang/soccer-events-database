@@ -8,12 +8,12 @@ def add_where_not_exists(table_name : str) -> str:
     '''.format(table=table_name)
 
 fifty_fifty_table = '''
-    INSERT INTO 50_50_events (event_id, outcome_name, counterpress)
+    INSERT INTO "50_50_events" (event_id, outcome_name, counterpress)
     SELECT
         %s AS event_id,
         %s AS outcome_name,
         %s AS counterpress
-''' + add_where_not_exists('50_50_events')
+''' + add_where_not_exists('"50_50_events"')
 
 bad_behaviour_table = '''
     INSERT INTO bad_behaviour_events (event_id, card_name)
@@ -23,14 +23,14 @@ bad_behaviour_table = '''
 ''' + add_where_not_exists('bad_behaviour_events')
 
 ball_receipt_table = '''
-    INSERT INTO (event_id, outcome_name)
+    INSERT INTO ball_receipt_events (event_id, outcome_name)
     SELECT
         %s AS event_id,
         %s AS outcome_name
 ''' + add_where_not_exists('ball_receipt_events')
 
 ball_recovery_table = '''
-    INSERT INTO (event_id, offensive, recovery_failure)
+    INSERT INTO ball_recovery_events (event_id, offensive, recovery_failure)
     SELECT
         %s AS event_id,
         %s AS offensive,
@@ -38,7 +38,7 @@ ball_recovery_table = '''
 ''' + add_where_not_exists('ball_recovery_events')
 
 block_table = '''
-    INSERT INTO (event_id, deflection, offensive, save_block, counterpress)
+    INSERT INTO block_events (event_id, deflection, offensive, save_block, counterpress)
     SELECT
         %s AS event_id,
         %s AS deflection,
@@ -48,14 +48,14 @@ block_table = '''
 ''' + add_where_not_exists('block_events')
 
 carry_table = '''
-    INSERT INTO (event_id, end_location)
+    INSERT INTO carry_events (event_id, end_location)
     SELECT
         %s AS event_id,
         %s AS end_location
 ''' + add_where_not_exists('carry_events')
 
 clearance_table = '''
-    INSERT INTO (event_id, aerial_won, body_part_name)
+    INSERT INTO clearance_events (event_id, aerial_won, body_part_name)
     SELECT
         %s AS event_id,
         %s AS aerial_won,
@@ -63,7 +63,7 @@ clearance_table = '''
 ''' + add_where_not_exists('clearance_events')
 
 dribble_table = '''
-    INSERT INTO (event_id, overrun, nutmeg, outcome_name, no_touch)
+    INSERT INTO dribble_events (event_id, overrun, nutmeg, outcome_name, no_touch)
     SELECT
         %s AS event_id,
         %s AS overrun,
@@ -73,14 +73,14 @@ dribble_table = '''
 ''' + add_where_not_exists('dribble_events')
 
 dribbled_past_table = '''
-    INSERT INTO (event_id, counterpress)
+    INSERT INTO dribbled_past_events (event_id, counterpress)
     SELECT
         %s AS event_id,
         %s AS counterpress
 ''' + add_where_not_exists('dribbled_past_events')
 
 duel_table = '''
-    INSERT INTO (event_id, counterpress, type_name, outcome_name)
+    INSERT INTO duel_events (event_id, counterpress, type_name, outcome_name)
     SELECT
         %s AS event_id,
         %s AS counterpress,
@@ -89,7 +89,7 @@ duel_table = '''
 ''' + add_where_not_exists('duel_events')
 
 foul_committed_table = '''
-    INSERT INTO (event_id, counterpress, offensive, type_name, advantage,
+    INSERT INTO foul_committed_events (event_id, counterpress, offensive, type_name, advantage,
     penalty, card_name)
     SELECT
         %s AS event_id,
@@ -102,7 +102,7 @@ foul_committed_table = '''
 ''' + add_where_not_exists('foul_committed_events')
 
 foul_won_table = '''
-    INSERT INTO (event_id, defensive, offensive, penalty)
+    INSERT INTO foul_won_events (event_id, defensive, offensive, penalty)
     SELECT
         %s AS event_id,
         %s AS defensive,
@@ -111,7 +111,7 @@ foul_won_table = '''
 ''' + add_where_not_exists('foul_won_events')
 
 goalkeeper_table = '''
-    INSERT INTO (event_id, position_name, technique_name, body_part_name,
+    INSERT INTO goalkeeper_events (event_id, position_name, technique_name, body_part_name,
     type_name, outcome_name)
     SELECT
         %s AS event_id,
@@ -123,7 +123,7 @@ goalkeeper_table = '''
 ''' + add_where_not_exists('goalkeeper_events')
 
 half_end_table = '''
-    INSERT INTO (event_id, early_video_end, match_suspended)
+    INSERT INTO half_end_events (event_id, early_video_end, match_suspended)
     SELECT
         %s AS event_id,
         %s AS early_video_end,
@@ -131,37 +131,37 @@ half_end_table = '''
 ''' + add_where_not_exists('half_end_events')
 
 half_start_table = '''
-    INSERT INTO (event_id, late_video_start)
+    INSERT INTO half_start_events (event_id, late_video_start)
     SELECT
         %s AS event_id,
         %s AS late_video_start
 ''' + add_where_not_exists('half_start_events')
 
 injury_stoppage_table = '''
-    INSERT INTO (event_id, in_chain)
+    INSERT INTO injury_stoppage_events (event_id, in_chain)
     SELECT
         %s AS event_id,
         %s AS in_chain
 ''' + add_where_not_exists('injury_stoppage_events')
 
 interception_table = '''
-    INSERT INTO (event_id, outcome_name)
+    INSERT INTO interception_events (event_id, outcome_name)
     SELECT
         %s AS event_id,
         %s AS outcome_name
 ''' + add_where_not_exists('interception_events')
 
 miscontrol_table = '''
-    INSERT INTO (event_id, aerial_won)
+    INSERT INTO miscontrol_events (event_id, aerial_won)
     SELECT
         %s AS event_id,
         %s AS aerial_won
 ''' + add_where_not_exists('miscontrol_events')
 
 pass_table = '''
-    INSERT INTO (event_id, recipient_id, length, angle, height_name,
+    INSERT INTO pass_events (event_id, recipient_id, length, angle, height_name,
     end_location, assisted_shot_id, backheel, deflected, miscommunication,
-    cross, cut_back, switch, shot_assist, goal_assist, body_part_name,
+    "cross", cut_back, switch, shot_assist, goal_assist, body_part_name,
     type_name, outcome_name, technique_name)
     SELECT
         %s AS event_id,
@@ -186,21 +186,21 @@ pass_table = '''
 ''' + add_where_not_exists('pass_events')
 
 player_off_table = '''
-    INSERT INTO (event_id, permanent)
+    INSERT INTO player_off_events (event_id, permanent)
     SELECT
         %s AS event_id,
         %s AS permanent
 ''' + add_where_not_exists('player_off_events')
 
 pressure_table = '''
-    INSERT INTO (event_id, counterpress)
+    INSERT INTO pressure_events (event_id, counterpress)
     SELECT
         %s AS event_id,
         %s AS counterpress
 ''' + add_where_not_exists('pressure_events')
 
 shot_table = '''
-    INSERT INTO (event_id, key_pass_id, end_location, aerial_won,
+    INSERT INTO shot_events (event_id, key_pass_id, end_location, aerial_won,
     follows_dribble, first_time, freeze_frame, open_goal, statsbomb_xg,
     deflected, technique_name, body_part_name, type_name, outcome_name)
     SELECT
@@ -221,7 +221,7 @@ shot_table = '''
 ''' + add_where_not_exists('shot_events')
 
 substitution_table = '''
-    INSERT INTO (event_id, replacement_name, outcome_name)
+    INSERT INTO substitution_events (event_id, replacement_name, outcome_name)
     SELECT
         %s AS event_id,
         %s AS replacement_name,

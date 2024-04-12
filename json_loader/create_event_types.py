@@ -1,5 +1,5 @@
 create_fifty_fifty_table = '''
-    CREATE TABLE IF NOT EXISTS 50_50_events (
+    CREATE TABLE IF NOT EXISTS "50_50_events" (
         event_id UUID PRIMARY KEY,
         outcome_name VARCHAR(255),
         counterpress BOOLEAN
@@ -151,15 +151,15 @@ create_pass_table = '''
     CREATE TABLE IF NOT EXISTS pass_events (
         event_id UUID PRIMARY KEY,
         recipient_id INT,
-        length DECIMAL(10, 10),
-        angle DECIMAL(10, 10),
+        length DECIMAL(10, 5),
+        angle DECIMAL(10, 5),
         height_name VARCHAR(255),
         end_location DECIMAL[],
         assisted_shot_id UUID,
         backheel BOOLEAN,
         deflected BOOLEAN,
         miscommunication BOOLEAN,
-        cross BOOLEAN,
+        "cross" BOOLEAN,
         cut_back BOOLEAN,
         switch BOOLEAN,
         shot_assist BOOLEAN,
@@ -195,7 +195,7 @@ create_shot_table = '''
         first_time BOOLEAN,
         freeze_frame JSONB,
         open_goal BOOLEAN,
-        statsbomb_xg DECIMAL(10, 10),
+        statsbomb_xg DECIMAL(10, 5),
         deflected BOOLEAN,
         technique_name VARCHAR(255),
         body_part_name VARCHAR(255),
@@ -212,7 +212,7 @@ create_substitution_table = '''
     );
 '''
 
-create_event_type_tables_query = create_fifty_fifty_table \
+event_type_tables_query = create_fifty_fifty_table \
     + create_bad_behaviour_table + create_ball_receipt_table \
     + create_ball_recovery_table + create_block_table \
     + create_carry_table + create_clearance_table + create_dribble_table \

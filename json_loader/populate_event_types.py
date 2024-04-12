@@ -1,3 +1,4 @@
+import json
 import psycopg2
 
 import insert_event_types as insert
@@ -31,8 +32,12 @@ def _populate_ball_receipt(event_id : str, ball_receipt : dict) :
     cur.execute(insert.ball_receipt_table , ball_receipt_values)
 
 def _populate_ball_recovery(event_id : str, ball_recovery : dict) :
-    ball_recovery_values = (event_id, ball_recovery['offensive'],
-                            ball_recovery['recovery_failure'], event_id)
+    offensive, recovery_failure = None, None
+    if 'offensive' in ball_recovery:
+        offensive = ball_recovery['offensive']
+    if 'recovery_failure' in ball_recovery:
+        recovery_failure = ball_recovery['recovery_failure']
+    ball_recovery_values = (event_id, offensive, recovery_failure, event_id)
     cur.execute(insert.ball_recovery_table, ball_recovery_values)
 
 def _populate_block(event_id : str, block : dict) :
@@ -78,33 +83,36 @@ def _populate_dribbled_past(event_id : str, dribbled_past : dict) :
     cur.execute(insert.dribbled_past_table, dribbled_past_values)
 
 def _populate_duel(event_id : str, duel : dict) :
-    counterpress = None
+    counterpress, outcome_name = None, None
     if 'counterpress' in duel:
         counterpress = duel['counterpress']
+    if 'outcome' in duel:
+        outcome_name = duel['outcome']['name']
     duel_values = (event_id, counterpress, duel['type']['name'],
-                   duel['outcome']['name'], event_id)
+                   outcome_name, event_id)
     cur.execute(insert.duel_table, duel_values)
 
 def _populate_foul_committed(event_id : str, foul_committed : dict) :
-    counterpress, offensive, advantage, penalty, card_name = None, None, \
-        None, None, None
+    counterpress, offensive, type_name, advantage, penalty, card_name = None, None, \
+        None, None, None, None
     if 'counterpress' in foul_committed:
         counterpress = foul_committed['counterpress']
     if 'offensive' in foul_committed:
         offensive = foul_committed['offensive']
+    if 'type_name' in foul_committed:
+        type_name = foul_committed['type']['name']
     if 'advantage' in foul_committed:
         advantage = foul_committed['advantage']
     if 'penalty' in foul_committed:
         penalty = foul_committed['penalty']
     if 'card' in foul_committed:
         card_name = foul_committed['card']['name']
-    foul_committed_values = (event_id, counterpress, offensive,
-                             foul_committed['type']['name'], advantage,
-                             penalty, card_name, event_id)
+    foul_committed_values = (event_id, counterpress, offensive, type_name,
+                             advantage, penalty, card_name, event_id)
     cur.execute(insert.foul_committed_table, foul_committed_values)
 
 def _populate_foul_won(event_id : str, foul_won : dict) :
-    defensive, advantage, penalty, counterpress = None, None, None
+    defensive, advantage, penalty = None, None, None
     if 'defensive' in foul_won:
         defensive = foul_won['defensive']
     if 'advantage' in foul_won:
@@ -114,47 +122,53 @@ def _populate_foul_won(event_id : str, foul_won : dict) :
     foul_won_values = (event_id, defensive, advantage, penalty, event_id)
     cur.execute(insert.foul_won_table, foul_won_values)
 
-def _populate_goalkeeper(event_id : str, goalkeeper : dict) :
-    technique_name, body_part_name, outcome_name = None, None, None
-    if 'technique_name' in goalkeeper:
-        technique_name = goalkeeper['technique_name']
-    if 'body_part_name' in goalkeeper:
-        body_part_name = goalkeeper['body_part_name']
-    if 'outcome_name' in goalkeeper:
-        outcome_name = goalkeeper['outcome_name']
-    goalkeeper_values = (event_id, goalkeeper['position']['name'],
-                         goalkeeper['technique']['name'],
-                         goalkeeper['body_part']['name'],
-                         goalkeeper['type']['name'],
-                         goalkeeper['outcome']['name'], event_id)
+def _populate_goalkeeper(event_id : str, goalkeeper : dict):
+    position_name, technique_name, body_part_name, outcome_name = None, \
+        None, None, None
+    if 'position' in goalkeeper:
+        position_name = goalkeeper['position']['name']
+    if 'technique' in goalkeeper:
+        technique_name = goalkeeper['technique']['name']
+    if 'body_part' in goalkeeper:
+        body_part_name = goalkeeper['body_part']['name']
+    if 'outcome' in goalkeeper:
+        outcome_name = goalkeeper['outcome']['name']
+    goalkeeper_values = (event_id, position_name, technique_name,
+                         body_part_name, goalkeeper['type']['name'],
+                         outcome_name, event_id)
     cur.execute(insert.goalkeeper_table, goalkeeper_values)
 
-def _populate_half_end(event_id : str, half_end : dict) :
+def _populate_half_end(event_id : str, half_end : dict):
     half_end_values = (event_id, half_end['early_video_end'],
                        half_end['match_suspended'], event_id)
     cur.execute(insert.half_end_table, half_end_values)
 
-def _populate_half_start(event_id : str, half_start : dict) :
+def _populate_half_start(event_id : str, half_start : dict):
     half_start_values = (event_id, half_start['late_video_start'], event_id)
     cur.execute(insert.half_start_table, half_start_values)
 
-def _populate_injury_stoppage(event_id : str, injury_stoppage : dict) :
+def _populate_injury_stoppage(event_id : str, injury_stoppage : dict):
     injury_stoppage_values = (event_id, injury_stoppage['in_chain'], event_id)
     cur.execute(insert.injury_stoppage_table, injury_stoppage_values)
 
-def _populate_interception(event_id : str, interception : dict) :
+def _populate_interception(event_id : str, interception : dict):
     interception_values = (event_id, interception['outcome']['name'],
                            event_id)
     cur.execute(insert.interception_table, interception_values)
 
-def _populate_miscontrol(event_id : str, miscontrol : dict) :
+def _populate_miscontrol(event_id : str, miscontrol : dict):
     miscontrol_values = (event_id, miscontrol['aerial_won'], event_id)
     cur.execute(insert.miscontrol_table, miscontrol_values)
 
-def _populate_pass(event_id : str, pass_dict : dict) :
-    backheel, deflected, miscommunication, cross, cut_back, switch, \
-        goal_assist, type_name, outcome_name, technique_name = None, None, \
-        None, None, None, None, None, None, None, None
+def _populate_pass(event_id : str, pass_dict : dict):
+    recipient_id, assisted_shot_id, backheel, deflected, miscommunication, \
+        cross, cut_back, switch, shot_assist, goal_assist, body_part_name, \
+        type_name, outcome_name, technique_name = None, None, None, None, \
+        None, None, None, None, None, None, None, None, None, None
+    if 'recipient' in pass_dict:
+        recipient_id = pass_dict['recipient']['id']
+    if 'assissted_shot_id' in pass_dict:
+        assisted_shot_id = pass_dict['assisted_shot_id']
     if 'backheel' in pass_dict:
         backheel = pass_dict['backheel']
     if 'deflected' in pass_dict:
@@ -167,37 +181,55 @@ def _populate_pass(event_id : str, pass_dict : dict) :
         cut_back = pass_dict['cut_back']
     if 'switch' in pass_dict:
         switch = pass_dict['switch']
+    if 'shot_assist' in pass_dict:
+        shot_assist = pass_dict['shot_assist']
     if 'goal_assist' in pass_dict:
         goal_assist = pass_dict['goal_assist']
+    if 'body_part' in pass_dict:
+        body_part_name = pass_dict['body_part']['name']
     if 'type' in pass_dict:
         type_name = pass_dict['type']['name']
     if 'outcome' in pass_dict:
         outcome_name = pass_dict['outcome']['name']
     if 'technique' in pass_dict:
         technique_name = pass_dict['technique']['name']
-    pass_values = (event_id, pass_dict['recipient']['id'],
+    pass_values = (event_id, recipient_id,
                    pass_dict['length'], pass_dict['angle'],
                    pass_dict['height']['name'], pass_dict['end_location'],
-                   pass_dict['assisted_shot_id'], backheel, deflected,
-                   miscommunication, cross, cut_back, switch,
-                   pass_dict['shot_assist'], goal_assist,
-                   pass_dict['body_part']['name'], type_name, outcome_name,
+                   assisted_shot_id, backheel, deflected, miscommunication,
+                   cross, cut_back, switch, shot_assist, goal_assist,
+                   body_part_name, type_name, outcome_name,
                    technique_name, event_id)
     cur.execute(insert.pass_table, pass_values)
 
-def _populate_player_off(event_id : str, player_off : dict) :
+def _populate_player_off(event_id : str, player_off : dict):
     player_off_values = (event_id, player_off['permanaent'], event_id)
     cur.execute(insert.player_off_table, player_off_values)
 
-def _populate_pressure(event_id : str, pressure : dict) :
+def _populate_pressure(event_id : str, pressure : dict):
     pressure_values = (event_id, pressure['counterpress'], event_id)
     cur.execute(insert.pressure_table, pressure_values)
 
-def _populate_shot(event_id : str, shot : dict) :
-    shot_values = (event_id, shot['key_pass_id'], shot['end_location'],
-                   shot['aerial_won'], shot['follows_dribble'],
-                   shot['first_time'], shot['freeze_frame'],
-                   shot['open_goal'], shot['statsbomb_xg'], shot['deflected'],
+def _populate_shot(event_id : str, shot : dict):
+    key_pass_id, aerial_won, follows_dribble, first_time, freeze_frame, \
+        open_goal, deflected = None, None, None, None, None, None, None
+    if 'key_pass_id' in shot:
+        key_pass_id = shot['key_pass_id']
+    if 'aerial_won' in shot:
+        aerial_won = shot['aerial_won']
+    if 'follows_dribble' in shot:
+        follows_dribble = shot['follows_dribble']
+    if 'first_time' in shot:
+        first_time = shot['first_time']
+    if 'freeze_frame' in shot:
+        freeze_frame = json.dumps(shot['freeze_frame'])
+    if 'open_goal' in shot:
+        open_goal = shot['open_goal']
+    if 'deflected' in shot:
+        deflected = shot['deflected']
+    shot_values = (event_id, key_pass_id, shot['end_location'],
+                   aerial_won, follows_dribble, first_time,
+                   freeze_frame, open_goal, shot['statsbomb_xg'], deflected,
                    shot['technique']['name'], shot['body_part']['name'],
                    shot['type']['name'], shot['outcome']['name'], event_id)
     cur.execute(insert.shot_table, shot_values)
@@ -207,9 +239,8 @@ def _populate_substitution(event_id : str, substitution : dict) :
                            substitution['outcome']['name'], event_id)
     cur.execute(insert.substitution_table, substitution_values)
 
-def populate_event_type_tables(event : dict):
+def event_type_tables(event : dict):
     event_id = event['id']
-    
     if '50_50' in event:
         _populate_fifty_fifty(event_id, event['50_50'])
     elif 'bad_behaviour' in event:
@@ -258,4 +289,3 @@ def populate_event_type_tables(event : dict):
         _populate_substitution(event_id, event['substitution'])
 
     conn.commit() # commit the transaction
-    
