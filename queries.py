@@ -38,7 +38,7 @@ sudo -u postgres psql
 root_database_name = "project_database"
 query_database_name = "query_database"
 db_username = 'postgres'
-db_password = 'postgres'
+db_password = '1234'
 db_host = 'localhost'
 db_port = '5432'
 
@@ -75,7 +75,7 @@ def load_database(conn):
 
     # Import the dbexport.sql database data into this database
     try:
-        command = f'/usr/local/bin/psql -h {host} -U {user} -d {query_database_name} -a -f "{os.path.join(dir_path, "dbexport.sql")}" > /dev/null 2>&1'
+        command = f'psql -h {host} -U {user} -d {query_database_name} -a -f "{os.path.join(dir_path, "dbexport.sql")}" > /dev/null 2>&1'
         env = {'PGPASSWORD': password}
         subprocess.run(command, shell=True, check=True, env=env)
 

@@ -1,6 +1,5 @@
 import psycopg2
 import requests
-import uuid
 
 import create_tables as c
 import insert_tables as i
