@@ -26,9 +26,9 @@ These are the coordinates of the top right area:
 |---------------------------------|
 120, 41.334, 1.335              120, 44, 1.335
 
-SELECT p.*, COUNT(*) AS num_corner_shots
+SELECT p.player_name, COUNT(*) AS num_corner_shots
 FROM players p
-JOIN events e ON p.player_id = e.player_id
+JOIN events e ON p.player_id = e.player_id AND p.match_id = e.match_id
 JOIN matches m ON m.match_id = e.match_id
 JOIN competitions c ON c.competition_id = m.competition_id AND m.season_id = c.season_id
 JOIN shot_events s ON s.event_id = e.id
@@ -48,7 +48,6 @@ GROUP BY p.player_name
 ORDER BY num_corner_shots DESC;
 
 
-
 2. In the La Liga season of 2020/2021, find the teams with the most successful passes into the box. Sort them from the highest to lowest.
 
 Assuming the box is the penalty area (18 yard box):
@@ -61,16 +60,16 @@ Coordinates of the boxes:
 
 SELECT t.team_name, COUNT(*) AS num_box_passes
 FROM teams t
-JOIN events e ON p.player_id = e.player_id
+JOIN events e ON t.team_id = e.team_id
 JOIN matches m ON m.match_id = e.match_id
 JOIN competitions c ON c.competition_id = m.competition_id AND m.season_id = c.season_id
 JOIN pass_events pe ON pe.event_id = e.id
 WHERE c.competition_name = 'La Liga'
     AND c.season_name = '2020/2021'
-    AND (s.end_location[1] BETWEEN 0 AND 10
-        OR s.end_location[1] BETWEEN 102 AND 120)
-    AND (s.end_location[2] BETWEEN 10 AND 62
-        OR s.end_location[2] BETWEEN 18 AND 62)
-    AND s.outcome_name = NULL
+    AND (pe.end_location[1] BETWEEN 0 AND 10
+        OR pe.end_location[1] BETWEEN 102 AND 120)
+    AND (pe.end_location[2] BETWEEN 10 AND 62
+        OR pe.end_location[2] BETWEEN 18 AND 62)
+    AND pe.outcome_name IS NULL
 GROUP BY t.team_name
 ORDER BY num_box_passes DESC;

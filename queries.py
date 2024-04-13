@@ -317,7 +317,20 @@ def Q_5(conn, execution_time):
     #==========================================================================
     # Enter QUERY within the quotes:
 
-    query = """ """
+    query = """
+        SELECT p.player_name, COUNT(e.id) AS num_received_passes
+        FROM pass_events pe
+        JOIN events e ON e.id = pe.event_id
+        JOIN players p ON p.player_id = pe.recipient_id AND p.match_id = e.match_id
+        JOIN matches m ON m.match_id = e.match_id
+        JOIN competitions c ON c.competition_id = m.competition_id AND c.season_id = m.season_id
+        WHERE c.competition_name = 'Premier League' AND c.season_name = '2003/2004'
+        AND e.type_name = 'Pass'
+        GROUP BY p.player_name
+        HAVING COUNT(e.id) > 0
+        ORDER BY num_received_passes DESC;
+    
+    """
 
     #==========================================================================
 
@@ -441,7 +454,20 @@ def Q_9(conn, execution_time):
     #==========================================================================
     # Enter QUERY within the quotes:
 
-    query = """ """
+    query = """ 
+        SELECT p.player_name, COUNT(e.id) AS num_dribble
+        FROM events e
+        JOIN players p ON e.player_id = p.player_id AND e.match_id = p.match_id
+        JOIN matches m ON m.match_id = e.match_id
+        JOIN competitions c ON c.competition_id = m.competition_id AND m.season_id = c.season_id
+        JOIN dribble_events d ON d.event_id = e.id
+        WHERE c.competition_name = 'La Liga'
+        AND c.season_name IN ('2020/2021','2019/2020','2018/2019')
+        AND d.outcome_name = 'Complete'
+        GROUP BY p.player_name
+        HAVING COUNT(e.id) > 0
+        ORDER BY num_dribble DESC;
+    """
 
     #==========================================================================
 
