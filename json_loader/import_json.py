@@ -344,6 +344,7 @@ for event in events_data:
         tactics = event['tactics']
         player_ids = [ p['player']['id'] for p in tactics['lineup'] ]
         tactics_values = (id, event['tactics']['formation'], player_ids, id)
+    cur.execute(i.tactics_query, tactics_values)
 
 conn.commit() # commit the transaction
 print('Populated the events table.')
